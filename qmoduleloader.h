@@ -15,10 +15,11 @@ class ModuleLoader : public QObject {
     Q_PROPERTY(bool modulesLoaded READ getModulesLoaded NOTIFY modulesLoadedChanged)
 
 public:
-    explicit ModuleLoader(QObject *parent = nullptr){};
+    explicit ModuleLoader(QObject *parent = nullptr): QObject(parent){};
 
     ~ModuleLoader() override {
-
+        modules.clear();
+        libraries.clear();
     };
 
     QString getModuleDirectory() const {
@@ -48,7 +49,9 @@ public:
 
     Q_INVOKABLE void loadModules() {
         if(modulesLoaded) return;
-
+        libraries.clear();
+        QDir d(moduleDirectory);
+        for(const auto& e : d.entryList(QStringList() << "*.so", QDir::Files)) libraries.append(loadModule(d.absoluteFilePath(e)));
         setModulesLoaded(true);
     }
 
@@ -68,17 +71,24 @@ private:
         emit modulesLoadedChanged();
     }
 
-    static QStringList listDirectory(const QString& directory){
-        QStringList r;
-        QDir dir(directory);
-        for(const auto& a : dir.entryList(QDir::Filter::Dirs)) r.append(a);
-        return r;
+    template<typename R> static R executeReturn(QLibrary* lib, const QString& functionName) {
+        typedef R (*Function)();
+        Function f = (Function) lib->resolve(functionName.toStdString().c_str());
+        if(!f) qDebug() << lib->errorString();
+        return f();
+    };
+
+    static QLibrary* loadModule(const QString &name){
+        auto *lib = new QLibrary(name.toStdString().c_str());
+        if(lib->load()) return lib;
+        return nullptr;
     }
 
     bool modulesLoaded = false;
     bool automaticallyLoadModules = false;
     QString moduleDirectory;
     QMap<QString, QObject*> modules;
+    QList<QLibrary*> libraries;
 };
 
 #endif //QMODULELOADER_QMODULELOADER_H
