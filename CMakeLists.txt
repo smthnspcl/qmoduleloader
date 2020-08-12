@@ -9,7 +9,7 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt5 COMPONENTS Core Qml REQUIRED)
 
-add_library(qmoduleloader SHARED qmoduleloader.h qmoduleloader.h)
+add_library(qmoduleloader SHARED qmoduleloader.h)
 
 set_target_properties(qmoduleloader PROPERTIES PUBLIC_HEADER "qmoduleloader.h")
 
